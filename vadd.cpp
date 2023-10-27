@@ -51,13 +51,14 @@ void write(uint64_t* mem, hls::stream<ap_uint<512>>& strm, uint64_t n) {
 
 extern "C" {
 void vadd(uint64_t* a, uint64_t* b, uint64_t* c, uint64_t* d, uint64_t* e,
-          uint64_t size) {
+          void* res, uint64_t size) {
     // clang-format off
 #pragma HLS interface mode=m_axi bundle=mem_bus_a port=a
 #pragma HLS interface mode=m_axi bundle=mem_bus_b port=b
 #pragma HLS interface mode=m_axi bundle=mem_bus_c port=c
 #pragma HLS interface mode=m_axi bundle=mem_bus_d port=d
 #pragma HLS interface mode=m_axi bundle=mem_bus_e port=e
+#pragma HLS interface mode=m_axi bundle=mem_bus_res port=res
 #pragma HLS interface mode=s_axilite port=size
     // clang-format on
 #pragma HLS dataflow
@@ -94,5 +95,8 @@ void vadd(uint64_t* a, uint64_t* b, uint64_t* c, uint64_t* d, uint64_t* e,
     read(d, strm_d, size);
     add(strm_a, strm_b, strm_c, strm_d, strm_o, size);
     write(e, strm_o, size);
+
+    res_t result = (res_t){.res_l = 16, .res_h = 32};
+    *(res_t*)res = result;
 }
 }
