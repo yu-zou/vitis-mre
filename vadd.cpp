@@ -51,7 +51,7 @@ void write(uint64_t* mem, hls::stream<ap_uint<512>>& strm, uint64_t n) {
 
 extern "C" {
 void vadd(uint64_t* a, uint64_t* b, uint64_t* c, uint64_t* d, uint64_t* e,
-          uint64_t size) {
+          param_t size) {
     // clang-format off
 #pragma HLS interface mode=m_axi bundle=mem_bus_a port=a
 #pragma HLS interface mode=m_axi bundle=mem_bus_b port=b
@@ -62,7 +62,8 @@ void vadd(uint64_t* a, uint64_t* b, uint64_t* c, uint64_t* d, uint64_t* e,
     // clang-format on
 #pragma HLS dataflow
 #ifndef __SYNTHESIS__
-    assert(size == 16);
+    assert(size.param_h == 16);
+    assert(size.param_l == 16);
 #endif
     hls::stream<ap_uint<512>> strm_a;
     hls::stream<ap_uint<512>> strm_b;
@@ -70,11 +71,11 @@ void vadd(uint64_t* a, uint64_t* b, uint64_t* c, uint64_t* d, uint64_t* e,
     hls::stream<ap_uint<512>> strm_d;
     hls::stream<ap_uint<512>> strm_o;
 
-    read(a, strm_a, size);
-    read(b, strm_b, size);
-    read(c, strm_c, size);
-    read(d, strm_d, size);
-    add(strm_a, strm_b, strm_c, strm_d, strm_o, size);
-    write(e, strm_o, size);
+    read(a, strm_a, size.param_h);
+    read(b, strm_b, size.param_h);
+    read(c, strm_c, size.param_h);
+    read(d, strm_d, size.param_h);
+    add(strm_a, strm_b, strm_c, strm_d, strm_o, size.param_l);
+    write(e, strm_o, size.param_h);
 }
 }
