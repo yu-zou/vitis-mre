@@ -28,8 +28,6 @@ const uint64_t b_src_addr = 0x00001000;
 const uint64_t c_src_addr = 0x00002000;
 const uint64_t d_src_addr = 0x00003000;
 const uint64_t o_src_addr = 0x00004000;
-const uint64_t cmd_src_addr = 0x00005000;
-const ap_uint<128> key = 0xdeadbeef;
 
 typedef struct {
     uint64_t param_l;
@@ -59,18 +57,38 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Load xclbin" << std::endl;
     auto uuid = device.load_xclbin(kernel_file);
+    // auto kernel = xrt::kernel(device, uuid, kernel_name);
     auto kernel = xrt::ip(device, uuid, kernel_name);
+    auto xclbin = xrt::xclbin(kernel_file);
+
+    std::vector<xrt::xclbin::ip> cu;
+    for (auto kernel : xclbin.get_kernels()) {
+        if (kernel.get_name() == kernel_name) {
+            cu = kernel.get_cus();
+        }
+    }
+    if (cu.empty()) throw std::runtime_error("IP is not found in the xclbin");
 
     // create a 4K aligned buffer
     char* global_mem;
     posix_memalign((void**)&global_mem, 4096,
                    4096 * 5 /*each buffer occupies 4KB*/);
 
+    // auto bo_a =
+    // xrt::bo(device, global_mem + a_src_addr, 4096, kernel.group_id(0));
+    // auto bo_b =
+    // xrt::bo(device, global_mem + b_src_addr, 4096, kernel.group_id(1));
+    // auto bo_c =
+    // xrt::bo(device, global_mem + c_src_addr, 4096, kernel.group_id(2));
+    // auto bo_d =
+    // xrt::bo(device, global_mem + d_src_addr, 4096, kernel.group_id(3));
+    // auto bo_o =
+    // xrt::bo(device, global_mem + o_src_addr, 4096, kernel.group_id(4));
     auto bo_a = xrt::bo(device, global_mem + a_src_addr, 4096, 0);
-    auto bo_b = xrt::bo(device, global_mem + b_src_addr, 4096, 0);
-    auto bo_c = xrt::bo(device, global_mem + c_src_addr, 4096, 0);
-    auto bo_d = xrt::bo(device, global_mem + d_src_addr, 4096, 0);
-    auto bo_o = xrt::bo(device, global_mem + o_src_addr, 4096, 0);
+    auto bo_b = xrt::bo(device, global_mem + b_src_addr, 4096, 1);
+    auto bo_c = xrt::bo(device, global_mem + c_src_addr, 4096, 2);
+    auto bo_d = xrt::bo(device, global_mem + d_src_addr, 4096, 3);
+    auto bo_o = xrt::bo(device, global_mem + o_src_addr, 4096, 4);
 
     for (int i = 0; i < 16; i++) global_mem[i] = i;
     memcpy(global_mem + b_src_addr, global_mem + a_src_addr, 4096);
@@ -84,20 +102,20 @@ int main(int argc, char* argv[]) {
 
     // auto run = kernel(bo_a, bo_b, bo_c, bo_d, bo_o, 16);
     // run.wait();
-    kernel.write_register(REG_OFFFSET_A, bo_a.address());
-    kernel.write_register(REG_OFFFSET_A + 4, bo_a.address() >> 32);
-    kernel.write_register(REG_OFFFSET_B, bo_b.address());
-    kernel.write_register(REG_OFFFSET_B + 4, bo_b.address() >> 32);
-    kernel.write_register(REG_OFFFSET_C, bo_c.address());
-    kernel.write_register(REG_OFFFSET_C + 4, bo_c.address() >> 32);
-    kernel.write_register(REG_OFFFSET_D, bo_d.address());
-    kernel.write_register(REG_OFFFSET_D + 4, bo_d.address() >> 32);
-    kernel.write_register(REG_OFFFSET_E, bo_o.address());
-    kernel.write_register(REG_OFFFSET_E + 4, bo_o.address() >> 32);
+    auto args = cu[0].get_args();
+    kernel.write_register(args[0].get_offset(), bo_a.address());
+    kernel.write_register(args[0].get_offset() + 4, bo_a.address() >> 32);
+    kernel.write_register(args[1].get_offset(), bo_b.address());
+    kernel.write_register(args[1].get_offset() + 4, bo_b.address() >> 32);
+    kernel.write_register(args[2].get_offset(), bo_c.address());
+    kernel.write_register(args[2].get_offset() + 4, bo_c.address() >> 32);
+    kernel.write_register(args[3].get_offset(), bo_d.address());
+    kernel.write_register(args[3].get_offset() + 4, bo_d.address() >> 32);
+    kernel.write_register(args[4].get_offset(), bo_o.address());
+    kernel.write_register(args[4].get_offset() + 4, bo_o.address() >> 32);
     uint64_t size = 16;
-    kernel.write_register(REG_OFFSET_SIZE, size);
-    kernel.write_register(REG_OFFSET_SIZE + 4, size >> 32);
-
+    kernel.write_register(args[5].get_offset(), size);
+    kernel.write_register(args[5].get_offset() + 4, size >> 32);
     uint32_t axi_ctrl = IP_START;
     kernel.write_register(REG_OFFSET_CSR, axi_ctrl);
     axi_ctrl = 0;
@@ -106,14 +124,4 @@ int main(int argc, char* argv[]) {
     }
 
     bo_o.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-
-    // res.res_l = kernel.read_register(REG_OFFSET_RES + 4);
-    // res.res_l = (res.res_l << 32) | kernel.read_register(REG_OFFSET_RES);
-    // res.res_h = kernel.read_register(REG_OFFSET_RES + 12);
-    // res.res_h = (res.res_h << 32) | kernel.read_register(REG_OFFSET_RES + 8);
-
-    // uint64_t res = kernel.read_register(REG_OFFSET_RES + 4);
-    // res = (res << 32) | kernel.read_register(REG_OFFSET_RES);
-
-    // std::cout << res << std::endl;
 }

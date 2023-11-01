@@ -62,25 +62,7 @@ void vadd(uint64_t* a, uint64_t* b, uint64_t* c, uint64_t* d, uint64_t* e,
     // clang-format on
 #pragma HLS dataflow
 #ifndef __SYNTHESIS__
-    std::cout << "size" << std::endl;
-    std::cout << std::hex << std::setw(16) << std::setfill('0') << size
-              << std::endl;
-    std::cout << "a" << std::endl;
-    for (int i = 0; i < 4; i++)
-        std::cout << std::hex << std::setw(16) << std::setfill('0') << a[i]
-                  << std::endl;
-    std::cout << "b" << std::endl;
-    for (int i = 0; i < 4; i++)
-        std::cout << std::hex << std::setw(16) << std::setfill('0') << b[i]
-                  << std::endl;
-    std::cout << "c" << std::endl;
-    for (int i = 0; i < 4; i++)
-        std::cout << std::hex << std::setw(16) << std::setfill('0') << c[i]
-                  << std::endl;
-    std::cout << "d" << std::endl;
-    for (int i = 0; i < 4; i++)
-        std::cout << std::hex << std::setw(16) << std::setfill('0') << d[i]
-                  << std::endl;
+    assert(size == 16);
 #endif
     hls::stream<ap_uint<512>> strm_a;
     hls::stream<ap_uint<512>> strm_b;
