@@ -29,16 +29,6 @@ const uint64_t c_src_addr = 0x00002000;
 const uint64_t d_src_addr = 0x00003000;
 const uint64_t o_src_addr = 0x00004000;
 
-typedef struct {
-    uint64_t param_l;
-    uint64_t param_h;
-} param_t;
-
-typedef struct {
-    uint64_t res_l;
-    uint64_t res_h;
-} res_t;
-
 int main(int argc, char* argv[]) {
     if (argc < 4) {
         std::cerr << "Invalid arguments" << std::endl;
@@ -84,16 +74,16 @@ int main(int argc, char* argv[]) {
     // xrt::bo(device, global_mem + d_src_addr, 4096, kernel.group_id(3));
     // auto bo_o =
     // xrt::bo(device, global_mem + o_src_addr, 4096, kernel.group_id(4));
-    auto bo_a = xrt::bo(device, global_mem + a_src_addr, 4096, 0);
-    auto bo_b = xrt::bo(device, global_mem + b_src_addr, 4096, 1);
-    auto bo_c = xrt::bo(device, global_mem + c_src_addr, 4096, 2);
-    auto bo_d = xrt::bo(device, global_mem + d_src_addr, 4096, 3);
-    auto bo_o = xrt::bo(device, global_mem + o_src_addr, 4096, 4);
+    auto bo_a = xrt::bo(device, global_mem + a_src_addr, N << 6, 0);
+    auto bo_b = xrt::bo(device, global_mem + b_src_addr, N << 6, 1);
+    auto bo_c = xrt::bo(device, global_mem + c_src_addr, N << 6, 2);
+    auto bo_d = xrt::bo(device, global_mem + d_src_addr, N << 6, 3);
+    auto bo_o = xrt::bo(device, global_mem + o_src_addr, N << 6, 4);
 
     for (int i = 0; i < 16; i++) global_mem[i] = i;
-    memcpy(global_mem + b_src_addr, global_mem + a_src_addr, 4096);
-    memcpy(global_mem + c_src_addr, global_mem + a_src_addr, 4096);
-    memcpy(global_mem + d_src_addr, global_mem + a_src_addr, 4096);
+    memcpy(global_mem + b_src_addr, global_mem + a_src_addr, N << 6);
+    memcpy(global_mem + c_src_addr, global_mem + a_src_addr, N << 6);
+    memcpy(global_mem + d_src_addr, global_mem + a_src_addr, N << 6);
 
     bo_a.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     bo_b.sync(XCL_BO_SYNC_BO_TO_DEVICE);
@@ -113,7 +103,7 @@ int main(int argc, char* argv[]) {
     kernel.write_register(args[3].get_offset() + 4, bo_d.address() >> 32);
     kernel.write_register(args[4].get_offset(), bo_o.address());
     kernel.write_register(args[4].get_offset() + 4, bo_o.address() >> 32);
-    uint64_t size = 16;
+    uint64_t size = N;
     kernel.write_register(args[5].get_offset(), size);
     kernel.write_register(args[5].get_offset() + 4, size >> 32);
     uint32_t axi_ctrl = IP_START;
